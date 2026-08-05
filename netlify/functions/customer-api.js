@@ -5,7 +5,7 @@
  * Contoh:
  * https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec
  */
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOfCN0Tc0vJmHrTLWu_UcDgS8Ow0I0t31SqqoQFqAueq2INAQFJwdPqBReAjsrA70/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxF9g2eHmvPGmBIJLwZPhbr0wfQSb0spv2RohgJqOtipHlaPxnwo052dghJ4PYAhs7I/exec";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
