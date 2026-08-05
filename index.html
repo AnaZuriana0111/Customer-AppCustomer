@@ -452,7 +452,15 @@
             <div class="font-bold text-slate-900">${escapeHtml(customer.nama)}</div>
           </td>
           <td class="whitespace-nowrap px-5 py-4">
-            <a class="font-medium text-indigo-600 hover:underline" href="tel:${escapeHtml(customer.phone)}">${escapeHtml(customer.phone)}</a>
+           
+            <a
+  href="${getWhatsAppUrl(customer.phone)}"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="font-medium text-emerald-600 hover:underline"
+>
+  ${escapeHtml(customer.phone)}
+</a>
           </td>
           <td class="px-5 py-4">
             <div class="flex flex-wrap gap-1.5">${renderProductBadges(customer.products)}</div>
