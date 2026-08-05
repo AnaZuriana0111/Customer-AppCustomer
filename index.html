@@ -170,10 +170,9 @@
   </main>
 
   <script>
-    // ================================================================
-    // WAJIB: Tukar kepada URL Web App Google Apps Script yang berakhir /exec
-    // ================================================================
-    const API_URL = "https://script.google.com/macros/s/AKfycbwSD1RFKQ5UrBV7FsaDE0wT5B8REBK2Gq_MvUCeSwfN4p2d_Ey3rXOVCGzxKWObZWD9/exec";
+    // Request dihantar ke Netlify Function pada domain yang sama.
+    // URL Google Apps Script dimasukkan dalam netlify/functions/customer-api.js.
+    const API_URL = "/.netlify/functions/customer-api";
 
     // Edit senarai produk di sini.
     const PRODUCTS = [
@@ -584,11 +583,7 @@
     }
 
     function isApiConfigured() {
-      if (!API_URL || API_URL.includes("PASTE_GOOGLE_APPS_SCRIPT")) {
-        showToast("Masukkan URL Web App Google Apps Script dalam index.html dahulu.", "error");
-        return false;
-      }
-      return true;
+      return Boolean(API_URL);
     }
 
     function showToast(message, type = "success") {
