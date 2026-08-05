@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>Sistem Rekod Customer</title>
+
+  <!-- Tailwind CSS v4 Play CDN. Untuk projek besar/production, compile Tailwind menggunakan CLI/Vite. -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style type="text/tailwindcss">
+    @theme {
+      --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    body {
+      @apply bg-slate-100 text-slate-800 antialiased;
+    }
+
+    .input-field {
+      @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100;
+    }
+
+    .label-text {
+      @apply mb-1.5 block text-sm font-semibold text-slate-700;
+    }
+
+    .card {
+      @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+    }
+  </style>
+</head>
+<body>
+  <div id="toastContainer" class="fixed right-4 top-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2"></div>
+
+  <main class="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+    <header class="mb-6 rounded-3xl bg-gradient-to-r from-indigo-600 to-violet-600 p-5 text-white shadow-lg sm:p-7">
+      <p class="mb-1 text-sm font-medium text-indigo-100">Digital Product Customer Database</p>
+      <h1 class="text-2xl font-bold sm:text-3xl">Sistem Rekod Customer</h1>
+      <p class="mt-2 max-w-2xl text-sm leading-6 text-indigo-100 sm:text-base">
+        Simpan pembelian customer, rekod beberapa produk dalam satu order, dan cari semula data dengan cepat.
+      </p>
+    </header>
+
+    <section class="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <!-- FORM -->
+      <div class="card h-fit p-4 sm:p-6 xl:sticky xl:top-6">
+        <div class="mb-5">
+          <h2 class="text-lg font-bold text-slate-900">Tambah pembelian</h2>
+          <p class="mt-1 text-sm text-slate-500">Tanda semua produk yang dibeli dalam transaksi yang sama.</p>
+        </div>
+
+        <form id="customerForm" class="space-y-5">
+          <div>
+            <label class="label-text" for="nama">Nama customer</label>
+            <input id="nama" name="nama" class="input-field" type="text" maxlength="100" autocomplete="name" placeholder="Contoh: Nur Aisyah" required />
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <div>
+              <label class="label-text" for="tarikh">Tarikh belian</label>
+              <input id="tarikh" name="tarikh" class="input-field" type="date" required />
+            </div>
+
+            <div>
+              <label class="label-text" for="phone">No. telefon</label>
+              <input id="phone" name="phone" class="input-field" type="tel" maxlength="25" inputmode="tel" autocomplete="tel" placeholder="Contoh: 0176016391" required />
+            </div>
+          </div>
+
+          <fieldset>
+            <legend class="label-text">Produk dibeli</legend>
+            <div id="productCheckboxes" class="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"></div>
+            <p id="productError" class="mt-2 hidden text-sm font-medium text-red-600">Pilih sekurang-kurangnya satu produk.</p>
+          </fieldset>
+
+          <button id="saveButton" type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60">
+            <svg id="saveSpinner" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span id="saveButtonText">Simpan rekod</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- CUSTOMER LIST -->
+      <div class="min-w-0 space-y-4">
+        <div class="card p-4 sm:p-5">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">Senarai customer</h2>
+              <p id="recordSummary" class="mt-1 text-sm text-slate-500">Memuatkan data...</p>
+            </div>
+
+            <button id="refreshButton" type="button" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M20 11a8.1 8.1 0 00-15.5-2M4 4v5h5M4 13a8.1 8.1 0 0015.5 2M20 20v-5h-5" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+
+          <div class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_240px]">
+            <div class="relative">
+              <svg class="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+              <input id="searchInput" class="input-field pl-11" type="search" placeholder="Cari nama atau no. telefon..." />
+            </div>
+
+            <select id="productFilter" class="input-field" aria-label="Tapis mengikut produk">
+              <option value="">Semua produk</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div id="loadingState" class="flex min-h-64 items-center justify-center p-8">
+            <div class="text-center">
+              <svg class="mx-auto h-8 w-8 animate-spin text-indigo-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+              <p class="mt-3 text-sm font-medium text-slate-500">Sedang ambil rekod customer...</p>
+            </div>
+          </div>
+
+          <div id="emptyState" class="hidden min-h-64 items-center justify-center p-8 text-center">
+            <div>
+              <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-2xl">📋</div>
+              <h3 class="mt-3 font-bold text-slate-800">Tiada rekod dijumpai</h3>
+              <p class="mt-1 text-sm text-slate-500">Tambah customer baru atau ubah kata carian.</p>
+            </div>
+          </div>
+
+          <!-- Desktop table -->
+          <div id="desktopTableWrapper" class="hidden overflow-x-auto md:block">
+            <table class="w-full min-w-[860px] text-left text-sm">
+              <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th class="px-5 py-3.5 font-bold">Tarikh</th>
+                  <th class="px-5 py-3.5 font-bold">Nama</th>
+                  <th class="px-5 py-3.5 font-bold">No. telefon</th>
+                  <th class="px-5 py-3.5 font-bold">Produk</th>
+                </tr>
+              </thead>
+              <tbody id="customerTableBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+
+          <!-- Mobile cards -->
+          <div id="mobileList" class="divide-y divide-slate-100 md:hidden"></div>
+
+          <div id="paginationSection" class="hidden border-t border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p id="paginationInfo" class="text-center text-sm text-slate-600 sm:text-left"></p>
+              <div class="flex items-center justify-center gap-2">
+                <button id="prevButton" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">Sebelum</button>
+                <div id="pageNumbers" class="flex items-center gap-1"></div>
+                <button id="nextButton" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">Seterusnya</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ================================================================
+    // WAJIB: Tukar kepada URL Web App Google Apps Script yang berakhir /exec
+    // ================================================================
+    const API_URL = "PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+    // Edit senarai produk di sini.
+    const PRODUCTS = [
+      "MPT4 Matematik",
+      "MPT4 Sains",
+      "MPT4 Bahasa Melayu",
+      "MPT4 English",
+      "Nota Komik Sains Tahun 4",
+      "Ujian Diagnostik Tahun 1",
+      "Merdeka Coloring Book"
+    ];
+
+    const PAGE_SIZE = 20;
+
+    const state = {
+      customers: [],
+      filteredCustomers: [],
+      currentPage: 1,
+      isLoading: false
+    };
+
+    const elements = {
+      form: document.getElementById("customerForm"),
+      nama: document.getElementById("nama"),
+      tarikh: document.getElementById("tarikh"),
+      phone: document.getElementById("phone"),
+      productCheckboxes: document.getElementById("productCheckboxes"),
+      productError: document.getElementById("productError"),
+      saveButton: document.getElementById("saveButton"),
+      saveSpinner: document.getElementById("saveSpinner"),
+      saveButtonText: document.getElementById("saveButtonText"),
+      searchInput: document.getElementById("searchInput"),
+      productFilter: document.getElementById("productFilter"),
+      refreshButton: document.getElementById("refreshButton"),
+      recordSummary: document.getElementById("recordSummary"),
+      loadingState: document.getElementById("loadingState"),
+      emptyState: document.getElementById("emptyState"),
+      desktopTableWrapper: document.getElementById("desktopTableWrapper"),
+      tableBody: document.getElementById("customerTableBody"),
+      mobileList: document.getElementById("mobileList"),
+      paginationSection: document.getElementById("paginationSection"),
+      paginationInfo: document.getElementById("paginationInfo"),
+      pageNumbers: document.getElementById("pageNumbers"),
+      prevButton: document.getElementById("prevButton"),
+      nextButton: document.getElementById("nextButton"),
+      toastContainer: document.getElementById("toastContainer")
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      renderProductOptions();
+      setDefaultDate();
+      bindEvents();
+      loadCustomers();
+    });
+
+    function bindEvents() {
+      elements.form.addEventListener("submit", handleSubmit);
+      elements.refreshButton.addEventListener("click", loadCustomers);
+
+      elements.searchInput.addEventListener("input", () => {
+        state.currentPage = 1;
+        applyFilters();
+      });
+
+      elements.productFilter.addEventListener("change", () => {
+        state.currentPage = 1;
+        applyFilters();
+      });
+
+      elements.prevButton.addEventListener("click", () => changePage(state.currentPage - 1));
+      elements.nextButton.addEventListener("click", () => changePage(state.currentPage + 1));
+    }
+
+    function renderProductOptions() {
+      elements.productCheckboxes.innerHTML = PRODUCTS.map((product, index) => `
+        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-indigo-300 hover:bg-indigo-50/50">
+          <input
+            type="checkbox"
+            name="products"
+            value="${escapeHtml(product)}"
+            class="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <span class="text-sm font-medium leading-5 text-slate-700">${escapeHtml(product)}</span>
+        </label>
+      `).join("");
+
+      elements.productFilter.insertAdjacentHTML(
+        "beforeend",
+        PRODUCTS.map(product => `<option value="${escapeHtml(product)}">${escapeHtml(product)}</option>`).join("")
+      );
+
+      elements.productCheckboxes.addEventListener("change", () => {
+        if (getSelectedProducts().length > 0) {
+          elements.productError.classList.add("hidden");
+        }
+      });
+    }
+
+    function setDefaultDate() {
+      const now = new Date();
+      const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 10);
+      elements.tarikh.value = localDate;
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+
+      if (!isApiConfigured()) return;
+
+      const products = getSelectedProducts();
+      if (products.length === 0) {
+        elements.productError.classList.remove("hidden");
+        return;
+      }
+
+      const payload = {
+        action: "create",
+        nama: elements.nama.value.trim(),
+        tarikh: elements.tarikh.value,
+        phone: normalizePhone(elements.phone.value),
+        products
+      };
+
+      if (!payload.nama || !payload.tarikh || !payload.phone) {
+        showToast("Sila lengkapkan semua ruangan wajib.", "error");
+        return;
+      }
+
+      setSaving(true);
+
+      try {
+        // text/plain digunakan supaya browser tidak menghantar CORS preflight OPTIONS.
+        const response = await fetch(API_URL, {
+          method: "POST",
+          redirect: "follow",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.status !== "success") {
+          throw new Error(result.message || "Rekod gagal disimpan.");
+        }
+
+        showToast("Rekod customer berjaya disimpan.", "success");
+        elements.form.reset();
+        setDefaultDate();
+        elements.productError.classList.add("hidden");
+        await loadCustomers(false);
+        elements.nama.focus();
+      } catch (error) {
+        console.error(error);
+        showToast(`Tak dapat simpan rekod: ${error.message}`, "error");
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    async function loadCustomers(showLoading = true) {
+      if (!isApiConfigured()) {
+        renderEmptyState();
+        elements.recordSummary.textContent = "Masukkan URL Google Apps Script dalam fail index.html dahulu.";
+        return;
+      }
+
+      if (state.isLoading) return;
+      state.isLoading = true;
+
+      if (showLoading) showLoadingState();
+      elements.refreshButton.disabled = true;
+
+      try {
+        const url = `${API_URL}?action=list&_=${Date.now()}`;
+        const response = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.status !== "success" || !Array.isArray(result.data)) {
+          throw new Error(result.message || "Format data API tidak sah.");
+        }
+
+        state.customers = result.data.sort(sortByNewestDate);
+        state.currentPage = 1;
+        applyFilters();
+      } catch (error) {
+        console.error(error);
+        state.customers = [];
+        state.filteredCustomers = [];
+        renderEmptyState();
+        elements.recordSummary.textContent = "Data gagal dimuatkan.";
+        showToast(`Tak dapat ambil data: ${error.message}`, "error");
+      } finally {
+        state.isLoading = false;
+        elements.refreshButton.disabled = false;
+      }
+    }
+
+    function applyFilters() {
+      const searchTerm = elements.searchInput.value.trim().toLowerCase();
+      const selectedProduct = elements.productFilter.value;
+
+      state.filteredCustomers = state.customers.filter(customer => {
+        const matchesSearch = !searchTerm ||
+          String(customer.nama || "").toLowerCase().includes(searchTerm) ||
+          String(customer.phone || "").toLowerCase().includes(searchTerm);
+
+        const customerProducts = Array.isArray(customer.products) ? customer.products : [];
+        const matchesProduct = !selectedProduct || customerProducts.includes(selectedProduct);
+
+        return matchesSearch && matchesProduct;
+      });
+
+      const totalPages = getTotalPages();
+      if (state.currentPage > totalPages) {
+        state.currentPage = Math.max(1, totalPages);
+      }
+
+      renderCustomers();
+    }
+
+    function renderCustomers() {
+      const total = state.filteredCustomers.length;
+      const totalAll = state.customers.length;
+
+      elements.loadingState.classList.add("hidden");
+
+      if (total === 0) {
+        renderEmptyState();
+        elements.recordSummary.textContent = totalAll === 0
+          ? "Belum ada rekod customer."
+          : `0 daripada ${totalAll} rekod sepadan dengan carian.`;
+        return;
+      }
+
+      elements.emptyState.classList.add("hidden");
+      elements.emptyState.classList.remove("flex");
+      elements.desktopTableWrapper.classList.remove("hidden");
+      elements.mobileList.classList.remove("hidden");
+      elements.paginationSection.classList.remove("hidden");
+
+      const startIndex = (state.currentPage - 1) * PAGE_SIZE;
+      const pageItems = state.filteredCustomers.slice(startIndex, startIndex + PAGE_SIZE);
+
+      elements.tableBody.innerHTML = pageItems.map(customer => `
+        <tr class="align-top transition hover:bg-slate-50">
+          <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-700">${formatDate(customer.tarikh)}</td>
+          <td class="px-5 py-4">
+            <div class="font-bold text-slate-900">${escapeHtml(customer.nama)}</div>
+          </td>
+          <td class="whitespace-nowrap px-5 py-4">
+            <a class="font-medium text-indigo-600 hover:underline" href="tel:${escapeHtml(customer.phone)}">${escapeHtml(customer.phone)}</a>
+          </td>
+          <td class="px-5 py-4">
+            <div class="flex flex-wrap gap-1.5">${renderProductBadges(customer.products)}</div>
+          </td>
+        </tr>
+      `).join("");
+
+      elements.mobileList.innerHTML = pageItems.map(customer => `
+        <article class="p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="truncate font-bold text-slate-900">${escapeHtml(customer.nama)}</h3>
+              <a class="mt-1 inline-block text-sm font-medium text-indigo-600" href="tel:${escapeHtml(customer.phone)}">${escapeHtml(customer.phone)}</a>
+            </div>
+            <time class="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-600">${formatDate(customer.tarikh)}</time>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-1.5">${renderProductBadges(customer.products)}</div>
+        </article>
+      `).join("");
+
+      elements.recordSummary.textContent = total === totalAll
+        ? `${totalAll} rekod keseluruhan • Susunan tarikh terbaru dahulu`
+        : `${total} daripada ${totalAll} rekod dijumpai`;
+
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const total = state.filteredCustomers.length;
+      const totalPages = getTotalPages();
+      const start = (state.currentPage - 1) * PAGE_SIZE + 1;
+      const end = Math.min(state.currentPage * PAGE_SIZE, total);
+
+      elements.paginationInfo.textContent = `Paparan ${start}–${end} daripada ${total}`;
+      elements.prevButton.disabled = state.currentPage <= 1;
+      elements.nextButton.disabled = state.currentPage >= totalPages;
+
+      const pages = getVisiblePageNumbers(totalPages, state.currentPage);
+      elements.pageNumbers.innerHTML = pages.map(page => {
+        if (page === "...") {
+          return `<span class="px-1 text-slate-400">…</span>`;
+        }
+
+        const active = page === state.currentPage;
+        return `
+          <button
+            type="button"
+            data-page="${page}"
+            class="h-9 min-w-9 rounded-lg px-2 text-sm font-bold transition ${active ? "bg-indigo-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-100"}"
+            ${active ? 'aria-current="page"' : ""}
+          >${page}</button>
+        `;
+      }).join("");
+
+      elements.pageNumbers.querySelectorAll("[data-page]").forEach(button => {
+        button.addEventListener("click", () => changePage(Number(button.dataset.page)));
+      });
+    }
+
+    function changePage(page) {
+      const totalPages = getTotalPages();
+      if (page < 1 || page > totalPages || page === state.currentPage) return;
+
+      state.currentPage = page;
+      renderCustomers();
+      document.querySelector("#recordSummary").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function getVisiblePageNumbers(totalPages, currentPage) {
+      if (totalPages <= 7) {
+        return Array.from({ length: totalPages }, (_, index) => index + 1);
+      }
+
+      if (currentPage <= 4) return [1, 2, 3, 4, 5, "...", totalPages];
+      if (currentPage >= totalPages - 3) return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+
+      return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+    }
+
+    function renderProductBadges(products) {
+      const list = Array.isArray(products) ? products : [];
+      return list.map(product => `
+        <span class="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">${escapeHtml(product)}</span>
+      `).join("");
+    }
+
+    function renderEmptyState() {
+      elements.loadingState.classList.add("hidden");
+      elements.desktopTableWrapper.classList.add("hidden");
+      elements.mobileList.classList.add("hidden");
+      elements.paginationSection.classList.add("hidden");
+      elements.emptyState.classList.remove("hidden");
+      elements.emptyState.classList.add("flex");
+    }
+
+    function showLoadingState() {
+      elements.loadingState.classList.remove("hidden");
+      elements.emptyState.classList.add("hidden");
+      elements.emptyState.classList.remove("flex");
+      elements.desktopTableWrapper.classList.add("hidden");
+      elements.mobileList.classList.add("hidden");
+      elements.paginationSection.classList.add("hidden");
+    }
+
+    function setSaving(isSaving) {
+      elements.saveButton.disabled = isSaving;
+      elements.saveSpinner.classList.toggle("hidden", !isSaving);
+      elements.saveButtonText.textContent = isSaving ? "Sedang simpan..." : "Simpan rekod";
+    }
+
+    function getSelectedProducts() {
+      return Array.from(document.querySelectorAll('input[name="products"]:checked'))
+        .map(input => input.value);
+    }
+
+    function getTotalPages() {
+      return Math.max(1, Math.ceil(state.filteredCustomers.length / PAGE_SIZE));
+    }
+
+    function sortByNewestDate(a, b) {
+      const dateCompare = String(b.tarikh || "").localeCompare(String(a.tarikh || ""));
+      if (dateCompare !== 0) return dateCompare;
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return "-";
+      const [year, month, day] = dateString.split("-").map(Number);
+      if (!year || !month || !day) return escapeHtml(dateString);
+
+      return new Intl.DateTimeFormat("ms-MY", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }).format(new Date(year, month - 1, day));
+    }
+
+    function normalizePhone(value) {
+      return String(value || "")
+        .trim()
+        .replace(/[^0-9+]/g, "");
+    }
+
+    function isApiConfigured() {
+      if (!API_URL || API_URL.includes("PASTE_GOOGLE_APPS_SCRIPT")) {
+        showToast("Masukkan URL Web App Google Apps Script dalam index.html dahulu.", "error");
+        return false;
+      }
+      return true;
+    }
+
+    function showToast(message, type = "success") {
+      const isSuccess = type === "success";
+      const toast = document.createElement("div");
+      toast.className = `rounded-xl border px-4 py-3 text-sm font-semibold shadow-lg transition ${
+        isSuccess
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-red-200 bg-red-50 text-red-800"
+      }`;
+      toast.textContent = message;
+      elements.toastContainer.appendChild(toast);
+
+      window.setTimeout(() => {
+        toast.classList.add("translate-x-3", "opacity-0");
+        window.setTimeout(() => toast.remove(), 250);
+      }, 3500);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>
