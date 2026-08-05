@@ -326,7 +326,12 @@
         }
 
         showToast("Rekod customer berjaya disimpan.", "success");
-       
+         if (result.data) {
+  state.customers.unshift(result.data);
+  state.customers.sort(sortByNewestDate);
+  state.currentPage = 1;
+  applyFilters();
+}
         
         elements.form.reset();
         setDefaultDate();
